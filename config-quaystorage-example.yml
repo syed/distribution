@@ -1,0 +1,128 @@
+# Distribution Registry Configuration with Quay Storage Backend
+# This configuration integrates the registry with Quay's database-backed storage system
+# for serving manifests from the database and blobs via S3 signed URLs.
+
+version: 0.1
+
+# Logging configuration
+log:
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    environment: development
+  accesslog:
+    disabled: false
+
+# HTTP server configuration
+http:
+  addr: :5000
+  prefix: /v2/
+  secret: changeme-registry-secret
+  relativeurls: false
+  draintimeout: 60s
+  
+  # Debug and metrics endpoint
+  debug:
+    addr: :5001
+    prometheus:
+      enabled: true
+      path: /metrics
+  
+  # Security headers
+  headers:
+    X-Content-Type-Options: [nosniff]
+    X-Frame-Options: [DENY]
+
+# Quay Storage Driver Configuration
+storage:
+  # Quay storage driver that integrates with Quay's database
+  quaystorage:
+    # Required: Database connection URL
+    # Format: postgres://username:password@host:port/database?sslmode=require
+    databaseurl: "postgresql://quay-registry-quay-database:I4udGMCW50jxtXA8V2vahfD9mHnlDPA2-hxPdmdPVqA5uwdo6127inIIdSk9Wq2D8uWby7yrhs2Q0ySP@quay-registry-quay-database:5432/quay-registry-quay-database?sslmode=disable"
+    
+    # Optional: Database driver (default: postgres)
+    databasedriver: postgres
+    
+    # Required: S3 bucket name where blobs are stored
+    s3bucket: quay-storage-bucket
+    
+    # Required: S3 region
+    s3region: us-east-1
+    
+    # Optional: S3 access credentials (can also use IAM roles)
+    s3accesskey: AKIAIOSFODNN7EXAMPLE
+    s3secretkey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    
+    # Optional: Custom S3 endpoint (for S3-compatible storage like MinIO)
+    # s3endpoint: https://s3.amazonaws.com
+    
+    # Optional: Duration for signed URLs (default: 15m)
+    signedurlDuration: 15m
+
+  # Storage features
+  delete:
+    enabled: false  # Typically disabled for Quay integration
+  
+  # Caching configuration
+  cache:
+    blobdescriptor: inmemory
+    blobdescriptorsize: 10000
+  
+  # Tag lookup concurrency limit
+  tag:
+    concurrencylimit: 8
+
+# Health check configuration
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+
+# Authentication configuration
+# Note: When using with Quay, authentication is typically handled by Quay itself
+auth:
+  # Token-based authentication
+  token:
+    realm: https://syed-docker-dist.quaydev.org/v2/auth
+    service: quay.example.com
+    issuer: quay.example.com
+    rootcertbundle: /path/to/quay-root-cert.pem
+    autoredirect: true
+
+# Notification configuration (optional)
+# notifications:
+#   events:
+#     includereferences: true
+#   endpoints:
+#     - name: quay-webhook
+#       url: https://quay.example.com/api/v1/webhook/registry
+#       headers:
+#         Authorization: [Bearer quay-webhook-token]
+#       timeout: 5s
+#       threshold: 3
+
+# Validation configuration
+validation:
+  enabled: true
+  manifests:
+    urls:
+      allow:
+        - ^https://.*
+    indexes:
+      platforms: all
+
+# Example database schema notes:
+# The quaystorage driver expects these database tables:
+# 
+# manifest table:
+#   - repository_name (text)
+#   - tag (text) 
+#   - manifest_bytes (bytea)
+#
+# blob_storage table:
+#   - blob_id (text) - the SHA256 hash
+#   - storage_path (text) - S3 object key/path
+#   - size (bigint) - blob size in bytes

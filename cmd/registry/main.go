@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "net/http/pprof"
+	_ "github.com/lib/pq"
 
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"
@@ -12,6 +13,7 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/gcs"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/quaystorage"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/middleware/cloudfront"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/middleware/redirect"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/middleware/rewrite"

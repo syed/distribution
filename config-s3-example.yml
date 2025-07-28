@@ -1,0 +1,269 @@
+# Distribution Registry Configuration with S3 Storage Backend
+# This is a comprehensive example configuration for running the Distribution registry
+# with Amazon S3 (or S3-compatible storage) as the backend storage driver.
+
+version: 0.1
+
+# Logging configuration
+log:
+  level: debug
+  formatter: text  # Options: text, json, logstash
+  fields:
+    service: registry
+    environment: production
+  accesslog:
+    disabled: false
+
+# HTTP server configuration
+http:
+  addr: :5000
+  prefix: /v2/
+  host: https://registry.example.com
+  secret: password  # Used for HMAC of HTTP sessions
+  relativeurls: false
+  draintimeout: 60s
+  
+  # Optional: Debug and metrics endpoint
+  debug:
+    addr: :5001
+    prometheus:
+      enabled: true
+      path: /metrics
+  
+  # Security headers
+  headers:
+    X-Content-Type-Options: [nosniff]
+    X-Frame-Options: [DENY]
+    X-Content-Security-Policy: ["default-src 'none'"]
+  
+  # HTTP/2 configuration
+  http2:
+    disabled: false
+  
+  # TLS configuration (recommended for production)
+  tls:
+    certificate: /path/to/server.crt
+    key: /path/to/server.key
+    minimumtls: tls1.2
+    ciphersuites:
+      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+
+# S3 Storage Driver Configuration
+storage:
+  # S3 storage driver
+  s3:
+    # Required: AWS region
+    region: us-west-2
+    
+    # Required: S3 bucket name
+    bucket: my-registry-bucket
+    
+    # Authentication - Method 1: Access Key/Secret Key
+    accesskey: AKIAIOSFODNN7EXAMPLE
+    secretkey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    
+    # Optional: Session token for temporary credentials
+    # sessiontoken: your-session-token-here
+    
+    # Optional: Root directory within the bucket (default: empty)
+    rootdirectory: /docker/registry/v2
+    
+    # Optional: Server-side encryption (default: false)
+    encrypt: true
+    
+    # Optional: KMS Key ID for encryption (if encrypt is true)
+    keyid: arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012
+    
+    # Optional: Use HTTPS (default: true)
+    secure: true
+    
+    # Optional: Skip TLS verification (default: false, not recommended for production)
+    skipverify: false
+    
+    # Optional: Use AWS Signature Version 4 (default: true, recommended)
+    v4auth: true
+    
+    # Optional: Chunk size for multipart uploads (default: 10MB, minimum: 5MB)
+    chunksize: 10485760  # 10MB
+    
+    # Optional: Storage class for objects
+    # Options: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER_IR
+    storageclass: STANDARD
+    
+    # Optional: Object ACL
+    # Options: private, public-read, public-read-write, authenticated-read, aws-exec-read, bucket-owner-read, bucket-owner-full-control
+    objectacl: private
+    
+    # Optional: Use dual-stack endpoints (IPv4 and IPv6)
+    usedualstack: false
+    
+    # Optional: Use Transfer Acceleration
+    accelerate: false
+    
+    # Optional: Force path-style URLs (for S3-compatible services)
+    forcepathstyle: false
+    
+    # Optional: Custom endpoint for S3-compatible services (like MinIO)
+    # regionendpoint: https://minio.example.com
+    
+    # Optional: Multipart copy settings for large objects
+    multipartcopychunksize: 33554432      # 32MB
+    multipartcopymaxconcurrency: 100
+    multipartcopythresholdsize: 33554432  # 32MB
+    
+    # Optional: User agent string
+    useragent: "distribution/3.0.0"
+    
+    # Optional: AWS SDK log level (off, error, warn, info, debug)
+    loglevel: error
+
+  # Storage features
+  delete:
+    enabled: true
+  
+  # Caching configuration
+  cache:
+    blobdescriptor: redis  # Options: redis, inmemory
+    blobdescriptorsize: 10000  # Only used with inmemory cache
+  
+  # Maintenance configuration
+  maintenance:
+    uploadpurging:
+      enabled: true
+      age: 168h      # 7 days
+      interval: 24h  # Check every 24 hours
+      dryrun: false
+    readonly:
+      enabled: false
+  
+  # Tag lookup concurrency limit
+  tag:
+    concurrencylimit: 8
+  
+  # URL validation for foreign layers
+  redirect:
+    disable: false
+
+# Redis configuration (required if using redis cache)
+redis:
+  addrs: ["redis:6379"]
+  # password: your-redis-password
+  # db: 0
+  # dialtimeout: 10ms
+  # readtimeout: 10ms
+  # writetimeout: 10ms
+  # pool:
+  #   maxidle: 16
+  #   maxactive: 64
+  #   idletimeout: 300s
+  
+# Authentication configuration
+auth:
+  # Token-based authentication (recommended for production)
+  token:
+    realm: https://auth.example.com/token
+    service: registry.example.com
+    issuer: auth.example.com
+    rootcertbundle: /path/to/root-cert-bundle.pem
+    autoredirect: true
+  
+  # Alternative: htpasswd authentication
+  # htpasswd:
+  #   realm: Registry Realm
+  #   path: /path/to/htpasswd
+  
+  # Alternative: silly auth (development only)
+  # silly:
+  #   realm: silly
+
+# Health check configuration
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+  
+  # Optional: File-based health checks
+  file:
+    - file: /path/to/health-check-file
+      interval: 10s
+  
+  # Optional: HTTP-based health checks
+  http:
+    - uri: https://example.com/health
+      headers:
+        Authorization: [Bearer your-token]
+      statuscode: 200
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+  
+  # Optional: TCP-based health checks
+  tcp:
+    - addr: redis:6379
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+
+# Notification configuration
+notifications:
+  events:
+    includereferences: true
+  endpoints:
+    - name: webhook
+      url: https://webhook.example.com/registry
+      headers:
+        Authorization: [Bearer your-webhook-token]
+      timeout: 5s
+      threshold: 10
+      backoff: 1s
+      ignoredmediatypes:
+        - application/octet-stream
+      ignore:
+        mediatypes:
+          - application/octet-stream
+        actions:
+          - pull
+
+# Validation configuration
+validation:
+  enabled: true
+  manifests:
+    urls:
+      allow:
+        - ^https://cdn\.example\.com/
+      deny:
+        - ^https://untrusted\.example\.com/
+    indexes:
+      platforms: all  # Options: all, list, none
+
+# Proxy configuration (for pull-through cache)
+# proxy:
+#   remoteurl: https://registry-1.docker.io
+#   username: your-dockerhub-username
+#   password: your-dockerhub-password
+#   ttl: 168h
+
+# Middleware configuration
+# middleware:
+#   storage:
+#     - name: cloudfront
+#       options:
+#         baseurl: https://d1234567890.cloudfront.net
+#         privatekey: /path/to/cloudfront-private-key.pem
+#         keypairid: APKAEIBAERJR2EXAMPLE
+#         duration: 20m
+#   registry:
+#     - name: bugsnag
+#       options:
+#         apikey: your-bugsnag-api-key
+#         releasestage: production
+#   repository:
+#     - name: sigstore
+#       options:
+#         threshold: 5

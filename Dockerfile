@@ -51,7 +51,7 @@ FROM scratch AS artifact
 COPY --from=releaser /out /
 
 FROM alpine:${ALPINE_VERSION}
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates postgresql-client
 COPY cmd/registry/config-dev.yml /etc/distribution/config.yml
 COPY --from=binary /registry /bin/registry
 VOLUME ["/var/lib/registry"]

@@ -30,6 +30,7 @@ import (
 )
 
 func init() {
+	fmt.Println("registering Azure driver")
 	factory.Register(driverName, &azureDriverFactory{})
 }
 
